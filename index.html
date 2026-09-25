@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lemon Tree House — เมนู</title>
+  <meta name="description" content="เมนูเครื่องดื่มและเบอร์เกอร์ Lemon Tree House">
+  <meta name="theme-color" content="#f7d33b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --lemon: #f7d33b;
+      --lemon-soft: #fff6c9;
+      --leaf: #3f7d3a;
+      --ink: #2b2a26;
+      --muted: #6f6b60;
+      --bg: #fffdf5;
+      --card: #ffffff;
+      --line: #eee6c8;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+    body {
+      margin: 0;
+      font-family: "Prompt", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .hero {
+      background: var(--lemon);
+      padding: 28px 16px 22px;
+      text-align: center;
+    }
+    .hero .logo { font-size: 40px; line-height: 1; }
+    .hero h1 { margin: 8px 0 2px; font-size: 26px; font-weight: 700; letter-spacing: .3px; }
+    .hero p { margin: 0; color: #5a4d10; font-size: 14px; }
+
+    /* Category tabs */
+    .tabs {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; gap: 8px;
+      padding: 12px 16px;
+      background: rgba(255, 253, 245, .95);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--line);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs a {
+      flex: 0 0 auto;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: var(--lemon-soft);
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+      transition: background .15s, color .15s;
+    }
+    .tabs a.active { background: var(--leaf); color: #fff; }
+
+    /* Sections */
+    main { max-width: 960px; margin: 0 auto; padding: 8px 16px 40px; }
+    section { padding-top: 16px; }
+    section h2 {
+      display: flex; align-items: center; gap: 8px;
+      margin: 8px 0 12px; font-size: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 880px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+
+    /* Item card: horizontal on phone, stacked on wider screens */
+    .item {
+      display: flex; gap: 12px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+    }
+    .thumb {
+      flex: 0 0 96px; width: 96px; height: 96px;
+      border-radius: 12px; overflow: hidden;
+      background: var(--lemon-soft);
+      display: grid; place-items: center;
+      font-size: 44px;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .info h3 { margin: 2px 0 2px; font-size: 16px; font-weight: 600; }
+    .info .desc { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .info .row { margin-top: auto; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .price { font-weight: 700; font-size: 17px; color: var(--leaf); }
+    .tag {
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 999px;
+      background: #ffe3dc; color: #b3401f;
+    }
+    @media (min-width: 560px) {
+      .item { flex-direction: column; }
+      .thumb { flex: none; width: 100%; height: 180px; font-size: 64px; }
+    }
+
+    footer {
+      text-align: center; color: var(--muted); font-size: 13px;
+      padding: 24px 16px 40px; border-top: 1px solid var(--line);
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="logo">🍋</div>
+    <h1>Lemon Tree House</h1>
+    <p>เครื่องดื่ม &amp; เบอร์เกอร์</p>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+  <main id="menu"></main>
+
+  <footer>
+    ราคาเป็นเงินบาท รวมภาษีแล้ว · สอบถามพนักงานได้เลยค่ะ
+  </footer>
+
+  <script>
+    // ===== แก้เมนูตรงนี้ =====
+    // img: ใส่ไฟล์รูปไว้ในโฟลเดอร์ images/ แล้วใส่ชื่อไฟล์ (ถ้าไม่มีรูป จะแสดง emoji แทน)
+    // tag: ป้ายเล็ก ๆ เช่น "ขายดี", "ใหม่" (ไม่ใส่ก็ได้)
+    const MENU = [
+      {
+        id: "drinks", title: "เครื่องดื่ม", icon: "🥤",
+        items: [
+          { name: "น้ำมะนาวโซดา", desc: "มะนาวคั้นสด โซดาซ่า หวานน้อยได้", price: 55, img: "images/lemon-soda.jpg", emoji: "🍋", tag: "ขายดี" },
+          { name: "ชาไทยเย็น", desc: "ชาไทยเข้มข้น นมสด", price: 50, img: "images/thai-tea.jpg", emoji: "🧋" },
+          { name: "ชามะนาว", desc: "ชาดำหอม ๆ กับมะนาวสด", price: 50, img: "images/lemon-tea.jpg", emoji: "🍹" },
+          { name: "อเมริกาโน่เย็น", desc: "กาแฟคั่วกลาง เข้ม หอม", price: 60, img: "images/americano.jpg", emoji: "☕" },
+          { name: "ลาเต้เย็น", desc: "เอสเปรสโซ่ นมสด นุ่ม ๆ", price: 65, img: "images/latte.jpg", emoji: "🥛" },
+          { name: "สตรอว์เบอร์รีสมูทตี้", desc: "สตรอว์เบอร์รีปั่น โยเกิร์ต", price: 70, img: "images/strawberry-smoothie.jpg", emoji: "🍓", tag: "ใหม่" }
+        ]
+      },
+      {
+        id: "burgers", title: "เบอร์เกอร์", icon: "🍔",
+        items: [
+          { name: "คลาสสิกชีสเบอร์เกอร์", desc: "เนื้อวัวย่าง เชดดาร์ ผักสด ซอสสูตรร้าน", price: 129, img: "images/classic-cheese.jpg", emoji: "🍔", tag: "ขายดี" },
+          { name: "ดับเบิลบีฟ", desc: "เนื้อ 2 ชั้น ชีส 2 แผ่น เบคอนกรอบ", price: 189, img: "images/double-beef.jpg", emoji: "🍔" },
+          { name: "ไก่กรอบเบอร์เกอร์", desc: "สะโพกไก่ทอดกรอบ ซอสมายองเนสมะนาว", price: 119, img: "images/crispy-chicken.jpg", emoji: "🍗" },
+          { name: "หมูบาร์บีคิว", desc: "หมูสับย่าง ซอสบาร์บีคิว หอมใหญ่ทอด", price: 125, img: "images/bbq-pork.jpg", emoji: "🥓" },
+          { name: "เห็ดชีสมังสวิรัติ", desc: "เห็ดพอร์โทเบลโลย่าง ชีส ผักสด", price: 115, img: "images/mushroom.jpg", emoji: "🍄" }
+        ]
+      },
+      {
+        id: "sides", title: "ของทานเล่น", icon: "🍟",
+        items: [
+          { name: "เฟรนช์ฟรายส์", desc: "ทอดกรอบ โรยเกลือ", price: 59, img: "images/fries.jpg", emoji: "🍟" },
+          { name: "หอมใหญ่ทอด", desc: "กรอบนอก หวานใน", price: 69, img: "images/onion-rings.jpg", emoji: "🧅" }
+        ]
+      }
+    ];
+    // ==========================
+
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    document.getElementById("tabs").innerHTML = MENU
+      .map(c => `<a href="#${c.id}" data-id="${c.id}">${c.icon} ${esc(c.title)}</a>`).join("");
+
+    document.getElementById("menu").innerHTML = MENU.map(c => `
+      <section id="${c.id}">
+        <h2>${c.icon} ${esc(c.title)}</h2>
+        <div class="grid">
+          ${c.items.map(i => `
+            <article class="item">
+              <div class="thumb" data-emoji="${esc(i.emoji || c.icon)}">
+                ${i.img ? `<img src="${esc(i.img)}" alt="${esc(i.name)}" loading="lazy">` : esc(i.emoji || c.icon)}
+              </div>
+              <div class="info">
+                <h3>${esc(i.name)}</h3>
+                <p class="desc">${esc(i.desc || "")}</p>
+                <div class="row">
+                  <span class="price">฿${i.price}</span>
+                  ${i.tag ? `<span class="tag">${esc(i.tag)}</span>` : ""}
+                </div>
+              </div>
+            </article>`).join("")}
+        </div>
+      </section>`).join("");
+
+    // Missing photo -> show emoji instead of a broken image
+    document.querySelectorAll(".thumb img").forEach(img => {
+      img.addEventListener("error", () => {
+        const box = img.parentElement;
+        box.textContent = box.dataset.emoji;
+      });
+    });
+
+    // Highlight the tab of the section currently on screen
+    const tabs = [...document.querySelectorAll(".tabs a")];
+    const setActive = id => tabs.forEach(t => {
+      const on = t.dataset.id === id;
+      t.classList.toggle("active", on);
+      if (on) t.parentElement.scrollTo({ left: t.offsetLeft - 16, behavior: "smooth" });
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) setActive(e.target.id); });
+    }, { rootMargin: "-80px 0px -60% 0px" });
+    document.querySelectorAll("main section").forEach(s => observer.observe(s));
+    setActive(MENU[0].id);
+  </script>
+</body>
+</html>
