@@ -96,6 +96,7 @@ function logout() {
   store.set("pos.token", null);
   $("app").hidden = true;
   $("bills").hidden = true;
+  $("summary").hidden = true;
   $("login").hidden = false;
   renderPin();
 }
@@ -312,6 +313,92 @@ async function voidBill(btn) {
   }
 }
 
+// ---------- สรุปยอด ----------
+
+const WEEKDAYS = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
+const RANGE_PREV = { today: "เมื่อวาน", week: "ช่วงเดียวกันของสัปดาห์ก่อน", month: "ช่วงเดียวกันของเดือนก่อน" };
+let summaryRange = "today";
+
+function thaiDate(day, withYear = false) {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("th-TH", {
+    day: "numeric", month: "short", timeZone: "UTC", ...(withYear ? { year: "numeric" } : {}),
+  });
+}
+
+async function loadSummary() {
+  $("summaryBody").innerHTML = `<p class="empty">กำลังโหลด…</p>`;
+  const range = summaryRange;
+  try {
+    const data = await api(`/api/summary?range=${range}`);
+    if (range === summaryRange) renderSummary(data);
+  } catch (err) {
+    if (err.status !== 401) $("summaryBody").innerHTML = `<p class="empty">โหลดสรุปยอดไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่</p>`;
+  }
+}
+
+function barRows(rows, { label, value, sub, highlightTop = false }) {
+  const max = Math.max(...rows.map(value), 1);
+  return `<div class="bars">${rows.map((r, i) => `
+    <div class="bar-row ${highlightTop && i === 0 ? "top" : ""}">
+      <span class="label">${esc(label(r))}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${(value(r) / max) * 100}%"></span></span>
+      <span class="val">${baht(value(r))}${sub ? `<small>${esc(sub(r))}</small>` : ""}</span>
+    </div>`).join("")}</div>`;
+}
+
+function renderSummary(d) {
+  const period = d.from === d.to ? thaiDate(d.from, true) : `${thaiDate(d.from)} – ${thaiDate(d.to, true)}`;
+  let delta;
+  if (!d.prevTotal) delta = `<div class="delta flat">${RANGE_PREV[d.range]}ยังไม่มียอด</div>`;
+  else {
+    const pct = Math.round(((d.total - d.prevTotal) / d.prevTotal) * 100);
+    const cls = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+    delta = `<div class="delta ${cls}">${pct > 0 ? "▲" : pct < 0 ? "▼" : "•"} ${Math.abs(pct)}% จาก${RANGE_PREV[d.range]} (${baht(d.prevTotal)})</div>`;
+  }
+
+  if (!d.bills) {
+    $("summaryBody").innerHTML = `<p class="range-label">${period}</p>
+      <div class="summary"><div><small>ยอดขาย</small><b>฿0</b>${delta}</div></div>
+      <p class="empty">ช่วงนี้ยังไม่มีบิล</p>`;
+    return;
+  }
+
+  // strftime('%w') ให้ 0 = อาทิตย์ — เรียงใหม่ให้เริ่มวันจันทร์
+  const weekdays = [1, 2, 3, 4, 5, 6, 0]
+    .map((wd, i) => ({ name: WEEKDAYS[i], ...(d.weekdays.find((w) => w.wd === wd) || { total: 0, bills: 0 }) }));
+
+  $("summaryBody").innerHTML = `
+    <p class="range-label">${period}</p>
+    <div class="summary">
+      <div><small>ยอดขาย</small><b>${baht(d.total)}</b>${delta}</div>
+      <div><small>จำนวนบิล</small><b>${d.bills}</b></div>
+      <div><small>เฉลี่ยต่อบิล</small><b>${baht(d.avg)}</b></div>
+    </div>
+
+    <div class="panel">
+      <h3>เมนูขายดี</h3>
+      <p class="hint">เรียงตามยอดเงิน</p>
+      ${barRows(d.items, { label: (r) => r.name, value: (r) => r.revenue, sub: (r) => `${r.qty} ชิ้น`, highlightTop: true })}
+    </div>
+
+    ${d.range !== "today" ? `
+    <div class="panel">
+      <h3>ยอดตามวันในสัปดาห์</h3>
+      ${barRows(weekdays, { label: (r) => r.name, value: (r) => r.total, sub: (r) => `${r.bills} บิล` })}
+    </div>` : ""}
+
+    <div class="panel">
+      <h3>ช่วงเวลาที่ขาย</h3>
+      ${barRows(d.hours, { label: (r) => `${String(r.hour).padStart(2, "0")}:00–${String(r.hour + 1).padStart(2, "0")}:00`, value: (r) => r.total, sub: (r) => `${r.bills} บิล` })}
+    </div>
+
+    ${d.range !== "today" ? `
+    <div class="panel">
+      <h3>รายวัน</h3>
+      <div class="day-list">${d.days.map((x) => `<div><b>${thaiDate(x.day)}</b><span>${x.bills} บิล · ${baht(x.total)}</span></div>`).join("")}</div>
+    </div>` : ""}`;
+}
+
 // ---------- ทั่วไป ----------
 
 let toastTimer;
@@ -360,6 +447,15 @@ function bindEvents() {
   $("scrim").addEventListener("click", closeCartSheet);
   $("openBills").addEventListener("click", () => { $("bills").hidden = false; renderBills(); refreshToday(); });
   $("closeBills").addEventListener("click", () => { $("bills").hidden = true; });
+  $("openSummary").addEventListener("click", () => { $("summary").hidden = false; loadSummary(); });
+  $("closeSummary").addEventListener("click", () => { $("summary").hidden = true; });
+  $("rangeSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-range]");
+    if (!b) return;
+    summaryRange = b.dataset.range;
+    for (const x of $("rangeSeg").children) x.classList.toggle("on", x === b);
+    loadSummary();
+  });
   $("billsBody").addEventListener("click", (e) => {
     const b = e.target.closest("[data-void]");
     if (b) voidBill(b);

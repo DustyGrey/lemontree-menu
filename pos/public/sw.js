@@ -1,5 +1,5 @@
 // เก็บหน้าแอปไว้ในเครื่อง เปิดได้แม้เน็ตหลุด (ขอเน็ตก่อนเสมอ จะได้เวอร์ชันใหม่ล่าสุด)
-const CACHE = "lemon-pos-v1";
+const CACHE = "lemon-pos-v2";
 const SHELL = ["./", "index.html", "app.js", "manifest.webmanifest", "icon.svg", "icon-180.png"];
 
 self.addEventListener("install", (e) => {

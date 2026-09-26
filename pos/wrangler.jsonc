@@ -8,10 +8,9 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
-  // ฐานข้อมูลสำรองบน Cloudflare D1 — ไม่ต้องใส่ database_id
-  // ตอน deploy ครั้งแรก wrangler จะสร้างฐานข้อมูลให้เอง
+  // ฐานข้อมูลสำรองบน Cloudflare D1 (สร้างตอน deploy ครั้งแรก แล้วล็อก id ไว้ไม่ให้สร้างใหม่)
   "d1_databases": [
-    { "binding": "DB", "database_name": "lemontree-sales" }
+    { "binding": "DB", "database_name": "lemontree-sales", "database_id": "64e66a72-f4f4-490c-85ef-344847e53e4e" }
   ],
   // ทุก 5 นาที ส่งบิลที่ค้างเข้า Notion อีกรอบ
   "triggers": { "crons": ["*/5 * * * *"] },
