@@ -1,0 +1,25 @@
+{
+  // แอป POS ของ Lemon Tree House (Cloudflare Worker + หน้าเว็บในโฟลเดอร์ public/)
+  "name": "lemontree-pos",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  // ฐานข้อมูลสำรองบน Cloudflare D1 — ไม่ต้องใส่ database_id
+  // ตอน deploy ครั้งแรก wrangler จะสร้างฐานข้อมูลให้เอง
+  "d1_databases": [
+    { "binding": "DB", "database_name": "lemontree-sales" }
+  ],
+  // ทุก 5 นาที ส่งบิลที่ค้างเข้า Notion อีกรอบ
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": {
+    "NOTION_MENU_DS": "3e2f272a-aea6-46c0-a80e-016b7492b4fd",
+    "NOTION_SALES_DS": "f28b5f04-3530-46b9-8145-eab66ca59704"
+  }
+  // ค่าลับที่ต้องตั้งใน Cloudflare (Settings → Variables and Secrets):
+  //   NOTION_TOKEN  กุญแจ Notion integration
+  //   APP_PIN       PIN ของร้าน สำหรับเข้าแอป
+}
