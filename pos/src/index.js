@@ -41,6 +41,7 @@ async function route(request, env, ctx, url) {
   if (pathname === "/api/menu" && method === "GET") return json({ menu: await getMenu(env) });
   if (pathname === "/api/orders" && method === "POST") return createOrder(request, env, ctx);
   if (pathname === "/api/today" && method === "GET") return json(await today(env));
+  if (pathname === "/api/summary" && method === "GET") return json(await summary(env, url.searchParams.get("range")));
   if (pathname === "/api/sync" && method === "POST") {
     ctx.waitUntil(syncPending(env));
     return json({ ok: true });
@@ -271,6 +272,71 @@ async function today(env) {
       items: items.filter((i) => i.order_id === o.id).map((i) => `${i.name} ×${i.qty}`),
     })),
   };
+}
+
+// ---------- สรุปยอด วันนี้ / สัปดาห์นี้ / เดือนนี้ ----------
+
+// เทียบกับช่วงก่อนหน้าที่ยาวเท่ากัน เช่น สัปดาห์นี้ จ.–ส. เทียบกับ จ.–ส. ของสัปดาห์ที่แล้ว
+function summaryRange(range, todayStr) {
+  if (range === "week") {
+    const offset = (new Date(`${todayStr}T00:00:00Z`).getUTCDay() + 6) % 7; // จันทร์ = 0
+    const from = addDays(todayStr, -offset);
+    return { from, to: todayStr, prevFrom: addDays(from, -7), prevTo: addDays(todayStr, -7) };
+  }
+  if (range === "month") {
+    const [y, m, d] = todayStr.split("-").map(Number);
+    const prev = new Date(Date.UTC(y, m - 2, 1));
+    const prevDays = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
+    const prevMonth = prev.toISOString().slice(0, 7);
+    return {
+      from: `${todayStr.slice(0, 7)}-01`,
+      to: todayStr,
+      prevFrom: `${prevMonth}-01`,
+      prevTo: `${prevMonth}-${String(Math.min(d, prevDays)).padStart(2, "0")}`,
+    };
+  }
+  const yesterday = addDays(todayStr, -1);
+  return { from: todayStr, to: todayStr, prevFrom: yesterday, prevTo: yesterday };
+}
+
+async function summary(env, range) {
+  range = ["today", "week", "month"].includes(range) ? range : "today";
+  const r = summaryRange(range, toThaiIso(Date.now()).slice(0, 10));
+  const ok = "o.status = 'ok' AND o.day BETWEEN ?1 AND ?2";
+  const q = (sql, from = r.from, to = r.to) => env.DB.prepare(sql).bind(from, to);
+
+  const [totals, prev, items, weekdays, hours, days] = await env.DB.batch([
+    q(`SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS bills FROM orders o WHERE ${ok}`),
+    q(`SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS bills FROM orders o WHERE ${ok}`, r.prevFrom, r.prevTo),
+    q(`SELECT MAX(i.name) AS name, SUM(i.qty) AS qty, SUM(i.qty * i.price) AS revenue
+       FROM order_items i JOIN orders o ON o.id = i.order_id WHERE ${ok}
+       GROUP BY i.menu_id ORDER BY revenue DESC, qty DESC LIMIT 10`),
+    q(`SELECT CAST(strftime('%w', o.day) AS INTEGER) AS wd, SUM(total) AS total, COUNT(*) AS bills
+       FROM orders o WHERE ${ok} GROUP BY wd`),
+    q(`SELECT CAST(substr(o.created_at, 12, 2) AS INTEGER) AS hour, SUM(total) AS total, COUNT(*) AS bills
+       FROM orders o WHERE ${ok} GROUP BY hour ORDER BY hour`),
+    q(`SELECT o.day AS day, SUM(total) AS total, COUNT(*) AS bills FROM orders o WHERE ${ok} GROUP BY o.day ORDER BY o.day DESC`),
+  ]);
+
+  const t = totals.results[0];
+  return {
+    range,
+    from: r.from,
+    to: r.to,
+    total: t.total,
+    bills: t.bills,
+    avg: t.bills ? Math.round(t.total / t.bills) : 0,
+    prevTotal: prev.results[0].total,
+    prevBills: prev.results[0].bills,
+    items: items.results,
+    weekdays: weekdays.results, // wd: 0 = อาทิตย์ … 6 = เสาร์
+    hours: hours.results,
+    days: days.results,
+  };
+}
+
+function addDays(dayStr, n) {
+  return new Date(Date.parse(`${dayStr}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 }
 
 // ---------- ส่งข้อมูลเข้า Notion ----------
